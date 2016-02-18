@@ -33,7 +33,7 @@ def read_temperatures(units=W1ThermSensor.DEGREES_F):
     return [dict(
         sensor_id=sensor.id,
         sensor_type=sensor.type_name,
-        temperature=sensor.get_temperature(_units)
+        temperature=sensor.get_temperature(units)
     ) for sensor in W1ThermSensor.get_available_sensors()]
 
 def publish_temperatures(temps):
