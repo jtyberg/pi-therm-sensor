@@ -2,11 +2,12 @@
 
 # Read temperatures from Raspberry Pi and send to MQTT endpoint.
 
-import argparse
+import click
 import json
 import ssl
 import paho.mqtt.publish as publish
 from w1thermsensor import W1ThermSensor
+from config import config
 
 def read_temperatures(units=W1ThermSensor.DEGREES_F):
     '''Read temperatures from attached thermometers.
@@ -36,51 +37,69 @@ def read_temperatures(units=W1ThermSensor.DEGREES_F):
         temperature=sensor.get_temperature(units)
     ) for sensor in W1ThermSensor.get_available_sensors()]
 
-def publish_temperatures(temps):
-    '''Publish temperature readings to MQTT endpoint.
+
+def publish_temps_aws(temps, config):
+    '''Publish temperature readings to AWS IoT.
 
     temps: iterable
+    config: AWS IoT configuration
     '''
-    from config import certs, mqtt
-
-    # configure TLS for secure connection
-    tls = dict(
-        ca_certs=certs['ca_certs'],
-        certfile=certs['certfile'],
-        keyfile=certs['keyfile'],
-        tls_version=ssl.PROTOCOL_TLSv1_2,
-        ciphers=None
-    )
-
     # for each temperature reading, publish to `topic/sensor_id`
     messages = []
+    topic = config['topic']
     for t in temps:
         messages.append({
-            'topic': '{}/{}'.format(mqtt['topic'], t['sensor_id']),
+            'topic': '{}/{}'.format(topic, t['sensor_id']),
             'payload': json.dumps(t)
         })
+
     if messages:
-        return publish.multiple(
+        # configure TLS for secure connection
+        certs = config['certs']
+        tls = dict(
+            ca_certs=certs['ca_certs'],
+            certfile=certs['certfile'],
+            keyfile=certs['keyfile'],
+            tls_version=ssl.PROTOCOL_TLSv1_2,
+            ciphers=None
+        )
+        publish.multiple(
             messages,
-            hostname=mqtt['host'],
-            port=mqtt['port'],
+            hostname=config['host'],
+            port=config['port'],
             tls=tls
         )
 
-def main():
-    # parse command line args to see if temps should be published
-    parser = argparse.ArgumentParser()
-    parser.add_argument('--publish', action='store_true',
-                        help='publish temperature readings')
-    args = parser.parse_args()
+def publish_temps_watson(temps, config):
+    '''Publish temperature readings to Watson IoT.
 
+    temps: iterable
+    config: Watson IoT configuration
+    '''
+    for t in temps:
+        result = publish.single(
+            topic=config['topic'],
+            payload=json.dumps(t),
+            hostname=config['host'],
+            port=config['port'],
+            client_id=config['client_id'],
+            auth=config['auth']
+        )
+
+@click.command()
+@click.option('--publish', '-p',
+              type=click.Choice(['aws', 'watson']),
+              multiple=True)
+def cli(publish):
     # read temps from sensors
     temps = read_temperatures()
     print(temps)
 
-    # publish temps to MQTT endpoint
-    if args.publish:
-        publish_temperatures(temps)
+    # publish to MQTT endpoints
+    for endpoint in publish:
+        c = config[endpoint]
+        f = globals()['publish_temps_{}'.format(endpoint)]
+        f(temps, c)
 
 if __name__ == '__main__':
-    main()
+    cli()
