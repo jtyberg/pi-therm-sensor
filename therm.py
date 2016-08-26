@@ -7,7 +7,7 @@ import json
 import ssl
 import paho.mqtt.publish as publish
 from w1thermsensor import W1ThermSensor
-from config import config
+from config import iot
 
 def read_temperatures(units=W1ThermSensor.DEGREES_F):
     '''Read temperatures from attached thermometers.
@@ -63,6 +63,9 @@ def publish_temps_aws(temps, config):
             tls_version=ssl.PROTOCOL_TLSv1_2,
             ciphers=None
         )
+        print('Publishing to {host}:{port}'.format(
+            host=config['host'], port=config['port'],
+        ))
         publish.multiple(
             messages,
             hostname=config['host'],
@@ -77,14 +80,26 @@ def publish_temps_watson(temps, config):
     config: Watson IoT configuration
     '''
     for t in temps:
-        result = publish.single(
-            topic=config['topic'],
-            payload=json.dumps(t),
-            hostname=config['host'],
-            port=config['port'],
-            client_id=config['client_id'],
-            auth=config['auth']
+        client_id = 'd:{org}:{device_type}:{device_id}'.format(
+            org=config['org'],
+            device_type=config['device_type'],
+            device_id=t['sensor_id']
         )
+        print('Publishing to {topic} @ {host}:{port} using {client_id}'.format(
+            topic=config['topic'], host=config['host'], port=config['port'],
+            client_id=client_id
+        ))
+        try:
+            result = publish.single(
+                topic=config['topic'],
+                payload=json.dumps(t),
+                hostname=config['host'],
+                port=config['port'],
+                client_id=client_id,
+                auth=config['auth']
+            )
+        except Exception as e:
+            print(e)
 
 @click.command()
 @click.option('--publish', '-p',
@@ -97,7 +112,7 @@ def cli(publish):
 
     # publish to MQTT endpoints
     for endpoint in publish:
-        c = config[endpoint]
+        c = iot[endpoint]
         f = globals()['publish_temps_{}'.format(endpoint)]
         f(temps, c)
 

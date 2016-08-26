@@ -1,6 +1,6 @@
 import os
 
-config = {
+iot = {
     "aws": {
         "host": os.getenv("AWS_MQTT_HOST", "ab0k2jox2x4ji.iot.us-east-1.amazonaws.com"),
         "port": os.getenv("AWS_MQTT_PORT", 8883),
@@ -16,11 +16,11 @@ config = {
         "org": "org_id",
         "host": "org_id.messaging.internetofthings.ibmcloud.com",
         "port": 1883,
-        "topic": "iot-2/evt/temperature/fmt/json",
         "auth": {
             "username": "use-token-auth",
             "password": "my-device-token"
         },
-        "client_id": "d:org_id:device_type:device_id"
+        "topic": "iot-2/evt/temperature/fmt/json",
+        "device_type": "DS1820-thermometer" # device type on Watson IoT
     }
 }
