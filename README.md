@@ -41,7 +41,7 @@ This sample can publish temperature readings to the [IBM Watson IoT Platform](ht
   ```
   cd /home/pi
 
-  git clone git@github.com:jtyberg/pi-therm-sensor.git
+  git clone https://github.com/jtyberg/pi-therm-sensor.git
   ```
 
 3. Modify the certificate and key file paths, and the MQTT endpoints in `config.py`.
@@ -60,12 +60,12 @@ This sample can publish temperature readings to the [IBM Watson IoT Platform](ht
   # just print the temperature readings to the console
   python3 therm.py
 
-  # print the temperatures to the console and publish them to MQTT endpoint
-  python3 therm.py --publish
+  # print the temperatures to the console and publish them to MQTT endpoints
+  python3 therm.py --publish aws --publish watson
   ```
 
 To setup a cron job to read and publish temperatures every 15 minutes:
 
 ```
-crontab -l | { cat; echo "0,15,30,45 * * * * /home/pi/pi-therm-sensor/therm.py --publish"; } | crontab -
+crontab -l | { cat; echo "0,15,30,45 * * * * /home/pi/pi-therm-sensor/therm.py --publish aws --publish watson"; } | crontab -
 ```
